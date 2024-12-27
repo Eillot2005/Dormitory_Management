@@ -14,7 +14,6 @@ public class MainLoginPanel {
 
         // 添加背景到最底层
         frame.getLayeredPane().add(backgroundLabel, JLayeredPane.DEFAULT_LAYER);
-
         // 设置内容面板透明
         JPanel contentPane = (JPanel) frame.getContentPane();
         contentPane.setOpaque(false);
