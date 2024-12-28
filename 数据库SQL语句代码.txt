@@ -1,0 +1,581 @@
+/*==============================================================*/
+/* Table: 学生                                                    */
+/*==============================================================*/
+create table 学生 (
+   SNO                  char(8)              not null,
+   SPassword            varchar(20)          not null,
+   SName                varchar(10)          not null,
+   SSex                 char(2)              not null default '男'
+      constraint CKC_SSEX_学生 check (SSex in ('男','女')),
+   SPhone               char(11)             not null,
+   SCollege             varchar(30)          not null,
+   SClass               varchar(30)          not null,
+   constraint PK_学生 primary key nonclustered (SNO)
+)
+go
+
+/*==============================================================*/
+/* Table: 学生居住寝室                                                */
+/*==============================================================*/
+create table 学生居住寝室 (
+   SNO                  char(8)              not null,
+   RNO                  varchar(10)           not null,
+   constraint PK_学生居住寝室 primary key (SNO, RNO)
+)
+go
+
+/*==============================================================*/
+/* Index: 学生居住寝室_FK                                             */
+/*==============================================================*/
+create index 学生居住寝室_FK on 学生居住寝室 (
+SNO ASC
+)
+go
+
+/*==============================================================*/
+/* Index: 学生居住寝室2_FK                                            */
+/*==============================================================*/
+create index 学生居住寝室2_FK on 学生居住寝室 (
+RNO ASC
+)
+go
+
+/*==============================================================*/
+/* Table: 寝室                                                    */
+/*==============================================================*/
+create table 寝室 (
+   RNO                  varchar(10)           not null,
+   RNumber              int                  not null default 0,
+   RMax                 int                  null,
+   constraint PK_寝室 primary key nonclustered (RNO)
+)
+go
+
+/*==============================================================*/
+/* Table: 报修信息                                                  */
+/*==============================================================*/
+create table 报修信息 (
+   FDetail              varchar(100)         not null,
+   FTime                datetime             not null,
+   FBool                bit                  not null default 0,
+   FRemark              varchar(100)         null,
+   FNO                  char(5)              not null,
+   RNO                  varchar(10)           null,
+   constraint PK_报修信息 primary key nonclustered (FNO)
+)
+go
+
+/*==============================================================*/
+/* Index: Relationship_3_FK                                     */
+/*==============================================================*/
+create index Relationship_3_FK on 报修信息 (
+RNO ASC
+)
+go
+
+/*==============================================================*/
+/* Table: 来访人信息                                                 */
+/*==============================================================*/
+create table 来访人信息 (
+   VName                varchar(10)          not null,
+   VPhone               char(11)             not null,
+   VSFZH                varchar(18)          not null,
+   constraint PK_来访人信息 primary key nonclustered (VSFZH)
+)
+go
+
+/*==============================================================*/
+/* Table: 来访登记                                                  */
+/*==============================================================*/
+create table 来访登记 (
+   SNO                  char(8)              not null,
+   VSFZH                varchar(18)          not null,
+   VNO                  char(6)              not null,
+   VTime                datetime             not null,
+   VLeave               datetime             not null,
+   VReason              varchar(100)         not null,
+   constraint PK_来访登记 primary key (VNO)
+)
+go
+
+/*==============================================================*/
+/* Index: 来访登记_FK                                               */
+/*==============================================================*/
+create index 来访登记_FK on 来访登记 (
+SNO ASC
+)
+go
+
+/*==============================================================*/
+/* Index: 来访登记2_FK                                              */
+/*==============================================================*/
+create index 来访登记2_FK on 来访登记 (
+VSFZH ASC
+)
+go
+
+/*==============================================================*/
+/* Table: 管理员                                                   */
+/*==============================================================*/
+create table 管理员 (
+   MNO                  char(8)              not null,
+   MPassword            varchar(20)          not null,
+   constraint PK_管理员 primary key nonclustered (MNO)
+)
+go
+
+alter table 学生居住寝室
+   add constraint FK_学生居住寝室_学生居住寝室_学生 foreign key (SNO)
+      references 学生 (SNO)
+go
+
+alter table 学生居住寝室
+   add constraint FK_学生居住寝室_学生居住寝室2_寝室 foreign key (RNO)
+      references 寝室 (RNO)
+go
+
+alter table 报修信息
+   add constraint FK_报修信息_RELATIONS_寝室 foreign key (RNO)
+      references 寝室 (RNO)
+go
+
+alter table 来访登记
+   add constraint FK_来访登记_来访登记_学生 foreign key (SNO)
+      references 学生 (SNO)
+go
+
+alter table 来访登记
+   add constraint FK_来访登记_来访登记2_来访人信息 foreign key (VSFZH)
+      references 来访人信息 (VSFZH)
+go
+
+
+
+
+
+
+
+
+
+
+CREATE PROCEDURE SP_ADD_STUDENT
+    @SNO CHAR(8),            -- 学号
+    @SPassword VARCHAR(20),  -- 密码
+    @SName VARCHAR(10),     -- 姓名
+    @SSex CHAR(2),            -- 性别
+    @SPhone CHAR(11),         -- 电话
+    @SCollege VARCHAR(30),    -- 学院
+    @SClass VARCHAR(30),      -- 班级
+    @RNO VARCHAR(10)         -- 寝室编号
+AS
+BEGIN
+    -- 向学生表插入记录
+    INSERT INTO 学生 (SNO, SPassword, SName, SSex, SPhone, SCollege, SClass)
+    VALUES (@SNO, @SPassword, @SName, @SSex, @SPhone, @SCollege, @SClass);
+
+    -- 向学生居住寝室表插入记录
+    INSERT INTO 学生居住寝室 (SNO, RNO)
+    VALUES (@SNO, @RNO);
+END;
+GO
+
+
+
+CREATE PROCEDURE SP_DELETE_STUDENT
+    @SNO CHAR(8)           -- 学号
+AS
+BEGIN
+    -- 获取学生所在的寝室编号
+    DECLARE @RNO VARCHAR(6);
+    SELECT @RNO = RNO FROM 学生居住寝室 WHERE SNO = @SNO;
+
+    -- 从学生居住寝室表删除记录
+    DELETE FROM 学生居住寝室
+    WHERE SNO = @SNO;
+
+    -- 更新寝室的入住人数
+    UPDATE 寝室
+    SET RNumber = RNumber - 1
+    WHERE RNO = @RNO;
+    -- 从学生表删除记录
+    DELETE FROM 学生
+    WHERE SNO = @SNO;
+END;
+GO
+
+
+
+CREATE PROCEDURE SP_ADD_REPAIR
+    @RNO VARCHAR(10),       -- 寝室编号
+    @FDetail VARCHAR(100), -- 报修详情
+    @FTime DATETIME,       -- 报修时间
+    @FNO CHAR(5)           -- 报修编号
+AS
+BEGIN
+    -- 向报修信息表插入记录
+    INSERT INTO 报修信息 (FDetail, FTime, FBool, FRemark, FNO, RNO)
+    VALUES (@FDetail, @FTime, 0, NULL, @FNO, @RNO);
+END;
+GO
+
+
+
+CREATE PROCEDURE SP_GET_ROOM_STATUS
+    @RNO VARCHAR(10)       -- 寝室编号
+AS
+BEGIN
+    -- 查询寝室基本信息
+    SELECT RNO, RNumber, RMax
+    FROM 寝室
+    WHERE RNO = @RNO;
+    -- 查询该寝室的学生列表
+    SELECT S.SNO, S.SName, S.SSex, S.SPhone, S.SCollege, S.SClass
+    FROM 学生居住寝室 JR
+    JOIN 学生 S ON JR.SNO = S.SNO
+    WHERE JR.RNO = @RNO;
+END;
+GO
+
+
+CREATE PROCEDURE SP_ADD_VISIT
+    @SNO CHAR(8),          -- 学生学号
+    @VSFZH VARCHAR(18),    -- 来访人身份证号
+    @VNO CHAR(6),          -- 来访编号
+    @VTime DATETIME,       -- 来访时间
+    @VLeave DATETIME,      -- 离开时间
+    @VReason VARCHAR(100)  -- 来访原因
+AS
+BEGIN
+    -- 向来访登记表插入记录
+    INSERT INTO 来访登记 (SNO, VSFZH, VNO, VTime, VLeave, VReason)
+    VALUES (@SNO, @VSFZH, @VNO, @VTime, @VLeave, @VReason);
+END;
+GO
+
+
+
+CREATE TRIGGER TR_ADD_STUDENT_TO_ROOM
+ON 学生居住寝室
+FOR INSERT
+AS
+UPDATE 寝室
+SET RNumber = RNumber + 1
+WHERE RNO IN (SELECT RNO FROM inserted)
+Go
+
+
+
+CREATE TRIGGER TR_REMOVE_STUDENT_FROM_ROOM
+ON 学生居住寝室
+FOR DELETE
+AS
+UPDATE 寝室
+SET RNumber = RNumber - 1
+WHERE RNO IN (SELECT RNO FROM deleted)
+GO
+
+
+CREATE TRIGGER TR_SetDefaultPassword
+ON 学生
+AFTER INSERT
+AS
+BEGIN
+    -- 明确指定更新操作中列名的来源
+    UPDATE 学生
+    SET SPassword = 'db' + i.SNO
+    FROM 学生 s
+    INNER JOIN inserted i ON s.SNO = i.SNO;
+END;
+
+
+
+
+
+CREATE VIEW View_Room_Status AS
+SELECT 
+    寝室.RNO AS 寝室编号,
+    寝室.RNumber AS 当前入住人数,
+    寝室.RMax AS 最大容量,
+    学生.SNO AS 学号,
+    学生.SName AS 姓名
+FROM 
+    寝室
+LEFT JOIN 学生居住寝室 ON 寝室.RNO = 学生居住寝室.RNO
+LEFT JOIN 学生 ON 学生居住寝室.SNO = 学生.SNO;
+GO 
+
+
+CREATE VIEW View_Repair_Info AS
+SELECT 
+    报修信息.FNO AS 报修编号,
+    报修信息.RNO AS 寝室编号,
+    报修信息.FDetail AS 报修内容,
+    报修信息.FTime AS 报修时间,
+    CASE WHEN 报修信息.FBool = 1 THEN '已解决' ELSE '未解决' END AS 解决状态,
+    报修信息.FRemark AS 备注
+FROM 
+    报修信息;
+GO
+
+CREATE VIEW View_Student_Info AS
+SELECT 
+    学生.SNO AS 学号,
+    学生.SName AS 姓名,
+    学生.SSex AS 性别,
+    学生.SPhone AS 电话,
+    学生.SCollege AS 学院,
+    学生.SClass AS 班级,
+    学生居住寝室.RNO AS 寝室编号
+FROM 
+    学生
+LEFT JOIN 学生居住寝室 ON 学生.SNO = 学生居住寝室.SNO;
+GO
+
+CREATE VIEW View_Visit_Record AS
+SELECT 
+    来访登记.VNO AS 来访编号,
+    来访人信息.VName AS 来访人姓名,
+    来访人信息.VSFZH AS 身份证号,
+    来访人信息.VPhone AS 来访人电话,
+    学生.SNO AS 学生学号,
+    学生.SName AS 学生姓名,
+    来访登记.VTime AS 来访时间,
+    来访登记.VLeave AS 离开时间,
+    来访登记.VReason AS 来访原因
+FROM 
+    来访登记
+LEFT JOIN 来访人信息 ON 来访登记.VSFZH = 来访人信息.VSFZH
+LEFT JOIN 学生 ON 来访登记.SNO = 学生.SNO;
+GO
+
+CREATE VIEW View_Unfilled_Room AS
+SELECT 
+    RNO AS 寝室编号,
+    RNumber AS 当前入住人数,
+    RMax AS 最大容量,
+    (RMax - RNumber) AS 剩余可入住人数
+FROM 
+    寝室
+WHERE 
+    RNumber < RMax;
+GO
+
+
+
+
+
+
+
+-- 更新或插入寝室信息
+-- 确保所有寝室的最大人数为6，并初始化当前人数为0（假设为统计动态更新）
+INSERT INTO 寝室 (RNO, RNumber, RMax)
+VALUES
+('DY-22-6609', 0, 6),
+('DY-22-6610', 0, 6),
+('DY-22-6611', 0, 6);
+-- 插入学生信息
+INSERT INTO 学生 (SNO, SPassword, SName, SSex, SPhone, SCollege, SClass)
+VALUES
+('20233592', 'db20233592', '刘斌', '男', '18670397763', '计算机与数学学院', '2023计算机科学与技术4班'),
+('20233593', 'db20233593', '刘逸潇', '男', '18688747878', '计算机与数学学院', '2023计算机科学与技术4班'),
+('20233589', 'db20233589', '蒋东林', '男', '18670397763', '计算机与数学学院', '2023计算机科学与技术4班'),
+('20233590', 'db20233590', '李方斐', '男', '15314405998', '计算机与数学学院', '2023计算机科学与技术4班'),
+('20233588', 'db20233588', '何天顺', '男', '18273939767', '计算机与数学学院', '2023计算机科学与技术4班'),
+('20233585', 'db20233585', '邓家和', '男', '19870378041', '计算机与数学学院', '2023计算机科学与技术4班'),
+('20233597', 'db20233597', '粟祖杭', '男', '18747306083', '计算机与数学学院', '2023计算机科学与技术4班'),
+('20233599', 'db20233599', '王晟', '男', '18174270385', '计算机与数学学院', '2023计算机科学与技术4班'),
+('20233596', 'db20233596', '彭文杰', '男', '17887476894', '计算机与数学学院', '2023计算机科学与技术4班'),
+('20233594', 'db20233594', '罗振宇', '男', '17673922913', '计算机与数学学院', '2023计算机科学与技术4班'),
+('20233595', 'db20233595', '孟轶涵', '男', '18273703623', '计算机与数学学院', '2023计算机科学与技术4班'),
+('20233602', 'db20233602', '鄢郅恒', '男', '18684718681', '计算机与数学学院', '2023计算机科学与技术4班'),
+('20233606', 'db20233606', '朱法成', '男', '15839867583', '计算机与数学学院', '2023计算机科学与技术4班'),
+('20233604', 'db20233604', '袁明琪', '男', '15637106726', '计算机与数学学院', '2023计算机科学与技术4班');
+
+-- 插入学生居住寝室信息
+INSERT INTO 学生居住寝室 (SNO, RNO)
+VALUES
+('20233592', 'DY-22-6609'),
+('20233593', 'DY-22-6609'),
+('20233589', 'DY-22-6609'),
+('20233590', 'DY-22-6609'),
+('20233588', 'DY-22-6609'),
+('20233585', 'DY-22-6609'),
+('20233597', 'DY-22-6610'),
+('20233599', 'DY-22-6610'),
+('20233596', 'DY-22-6610'),
+('20233594', 'DY-22-6610'),
+('20233595', 'DY-22-6610'),
+('20233602', 'DY-22-6610'),
+('20233606', 'DY-22-6611'),
+('20233604', 'DY-22-6611');
+
+-- 初始化报修信息表
+INSERT INTO 报修信息 (FDetail, FTime, FBool, FRemark, FNO, RNO)
+VALUES
+('水管漏水', '2024-01-15 10:00:00', 0, '等待维修', '00001', 'DY-22-6609'),
+('灯泡损坏', '2024-01-16 15:00:00', 1, '维修完成', '00002', 'DY-22-6610'),
+('门锁松动', '2024-01-17 18:00:00', 0, '等待维修', '00003', 'DY-22-6611');
+
+-- 初始化来访人信息表
+INSERT INTO 来访人信息 (VName, VPhone, VSFZH)
+VALUES
+('赵六', '13812345678', '123456789012345678'),
+('钱七', '13887654321', '234567890123456789'),
+('孙八', '13911223344', '345678901234567890'),
+('李九', '13999887766', '456789012345678901');
+
+-- 初始化来访登记表
+INSERT INTO 来访登记 (SNO, VSFZH, VNO, VTime, VLeave, VReason)
+VALUES
+('20233592', '123456789012345678', '0001', '2024-01-20 10:00:00', '2024-01-20 12:00:00', '探访同学'),
+('20233593', '234567890123456789', '0002', '2024-01-21 14:00:00', '2024-01-21 15:30:00', '送文件'),
+('20233594', '345678901234567890', '0003', '2024-01-22 09:00:00', '2024-01-22 11:00:00', '交还书籍'),
+('20233595', '456789012345678901', '0004', '2024-01-23 16:00:00', '2024-01-23 17:00:00', '讨论项目');
+
+-- 初始化管理员表
+INSERT INTO 管理员 (MNO, MPassword)
+VALUES
+('admin', '001');
+
+
+
+
+SELECT * FROM View_Student_Info
+SELECT * FROM View_Repair_Info
+
+
+
+
+
+
+
+-- 插入寝室表数据
+INSERT INTO 寝室 (RNO, RNumber, RMax)
+VALUES
+('QY22-6-607', 6, 6),
+('QY22-6-608', 6, 6);
+
+
+-- 插入学生表数据
+INSERT INTO 学生 (SNO, SPassword, SName, SSex, SPhone, SCollege, SClass)
+VALUES
+('20233573', 'db20233573', '林建成', '男', '19873267496', '计算机与数学学院', '2023计算机科学与技术3班'),
+('20233574', 'db20233574', '刘昊天', '男', '13575273609', '计算机与数学学院', '2023计算机科学与技术3班'),
+('20233569', 'db20233569', '黄少宽', '男', '19074908288', '计算机与数学学院', '2023计算机科学与技术3班'),
+('20233575', 'db20233575', '刘俊龙', '男', '18873540632', '计算机与数学学院', '2023计算机科学与技术3班'),
+('20233572', 'db20233572', '李强', '男', '17765514177', '计算机与数学学院', '2023计算机科学与技术3班'),
+('20233571', 'db20233571', '邝世和', '男', '15973368522', '计算机与数学学院', '2023计算机科学与技术3班'),
+('20233583', 'db20233583', '钟世景', '男', '15029756032', '计算机与数学学院', '2023计算机科学与技术3班'),
+('20233581', 'db20233581', '姚祈舜', '男', '18684668902', '计算机与数学学院', '2023计算机科学与技术3班'),
+('20233584', 'db20233584', '周焕樟', '男', '15084943271', '计算机与数学学院', '2023计算机科学与技术3班'),
+('20233578', 'db20233578', '吴林轩', '男', '15243627842', '计算机与数学学院', '2023计算机科学与技术3班'),
+('20233576', 'db20233576', '陆科行', '男', '18807469317', '计算机与数学学院', '2023计算机科学与技术3班'),
+('20233582', 'db20233582', '赵先鹏', '男', '18073657248', '计算机与数学学院', '2023计算机科学与技术3班');
+
+
+
+-- 插入学生居住寝室表数据
+INSERT INTO 学生居住寝室 (SNO, RNO)
+VALUES
+('20233573', 'DY-22-6607'),
+('20233574', 'DY-22-6607'),
+('20233569', 'DY-22-6607'),
+('20233575', 'DY-22-6607'),
+('20233572', 'DY-22-6607'),
+('20233571', 'DY-22-6607'),
+('20233583', 'DY-22-6608'),
+('20233581', 'DY-22-6608'),
+('20233584', 'DY-22-6608'),
+('20233578', 'DY-22-6608'),
+('20233576', 'DY-22-6608'),
+('20233582', 'DY-22-6608');
+
+
+
+-- 执行存储过程插入一个新学生，并分配到寝室
+EXEC SP_ADD_STUDENT
+    @SNO = '20231234',
+    @SPassword = 'db20231234',
+    @SName = '测试学生',
+    @SSex = '男',
+    @SPhone = '13887654321',
+    @SCollege = '测试学院',
+    @SClass = '测试班级',
+    @RNO = 'DY-22-6611';
+-- 验证：查看学生表和寝室表是否正确更新
+SELECT * FROM 学生 WHERE SNO = '20231234';
+SELECT * FROM 寝室 WHERE RNO = 'DY-22-6611';
+
+
+-- 执行存储过程删除一个学生记录
+EXEC SP_DELETE_STUDENT
+    @SNO = '20231234'
+-- 验证：查看学生表和寝室表是否正确更新
+SELECT * FROM 学生 WHERE SNO = '20231234';
+SELECT * FROM 寝室 WHERE RNO = 'DY-22-6611';
+
+
+
+-- 执行存储过程添加报修记录
+declare @tmp DATETIME
+set @tmp = GETDATE()
+EXEC SP_ADD_REPAIR
+    @RNO = 'DY-22-6611',
+    @FDetail = '灯坏了',
+    @FTime = @tmp,
+    @FNO = '00010';
+-- 验证：查询报修信息表是否正确插入记录
+SELECT * FROM 报修信息 WHERE FNO = '00010';
+
+
+-- 执行存储过程添加来访记录
+DECLARE @tmp1 DATETIME
+DECLARE @tmp2 DATETIME
+set @tmp1=getdate()
+set @tmp2=dateadd(hour,2,@tmp1)
+-- 执行存储过程添加来访记录
+EXEC SP_ADD_VISIT
+    @SNO = '20233592',
+    @VSFZH = '430124200510047312',
+    @VNO = '000006',
+    @VTime = @tmp1,
+    @VLeave = @tmp2,
+    @VReason = '参观校园';
+-- 验证：查询来访登记表是否正确插入记录
+SELECT * FROM 来访登记 WHERE VNO = '000006';
+
+
+EXEC SP_GET_ROOM_STATUS 
+    @RNO = 'DY-22-6607';
+EXEC SP_GET_ROOM_STATUS 
+    @RNO = 'DY-22-6611';
+
+
+-- 插入一个学生记录到学生居住寝室，观察寝室的入住人数是否自动增加
+INSERT INTO 学生居住寝室 (SNO, RNO)
+VALUES ('20231234', 'DY-22-6611');
+-- 验证触发器效果：查询寝室的当前人数
+SELECT * FROM 寝室 WHERE RNO = 'DY-22-6611';
+
+
+-- 删除一个学生记录，观察寝室的入住人数是否自动减少
+DELETE FROM 学生居住寝室 WHERE SNO = '20231234';
+-- 验证触发器效果：查询寝室的当前人数
+SELECT * FROM 寝室 WHERE RNO = 'DY-22-6611';
+
+
+
+-- 插入一个新学生记录，观察是否自动设置默认密码
+INSERT INTO 学生 (SNO, SPassword, SName, SSex, SPhone, SCollege, SClass)
+VALUES ('20231234', NULL, '测试学生', '男', '13812345678', '测试学院', '测试班级');
+-- 验证触发器效果：查询新学生的密码是否自动生成
+SELECT * FROM 学生 WHERE SNO = '20231234';
+
+
+select * from View_Room_Status
+
+
+SELECT 学生.SNO, 学生.SName, 学生.SSex, 学生.SPhone, 学生.SCollege, 学生.SClass
+FROM 学生居住寝室
+JOIN 学生 ON 学生居住寝室.SNO = 学生.SNO
+WHERE 学生居住寝室.RNO = 'DY-22-6609'
